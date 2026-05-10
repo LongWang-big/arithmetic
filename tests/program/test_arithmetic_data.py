@@ -2,71 +2,74 @@ import os
 import unittest
 import tempfile
 
-from program.formatter import (
-    format_answer,
-    format_numbered_answers,
-    format_numbered_questions,
-    format_question,
-)
-from program.question_generator import generate_question, generate_quiz
-from program.storage import append_quiz, load_cases
+from program.question import Question
+from program.question_generator import QuestionGenerator
+from program.storage import QuizFileHandler
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 
 class TestArithmeticData(unittest.TestCase):
 
+    def setUp(self):
+        self.generator = QuestionGenerator(max_answer=100)
+        self.handler = QuizFileHandler()
+
     def test_generate_question_structure(self):
-        a, op, b, answer = generate_question()
-        self.assertIn(op, ('+', '-'))
-        self.assertIsInstance(a, int)
-        self.assertIsInstance(b, int)
-        self.assertIsInstance(answer, int)
+        q = self.generator.generate_one()
+        self.assertIn(q.op, ('+', '-'))
+        self.assertIsInstance(q.a, int)
+        self.assertIsInstance(q.b, int)
+        self.assertIsInstance(q.answer, int)
 
     def test_generate_question_result_range(self):
         for _ in range(500):
-            a, op, b, answer = generate_question()
-            self.assertGreaterEqual(answer, 0)
-            self.assertLessEqual(answer, 100)
+            q = self.generator.generate_one()
+            self.assertGreaterEqual(q.answer, 0)
+            self.assertLessEqual(q.answer, 100)
 
     def test_generate_question_addition_correct(self):
         for _ in range(200):
-            a, op, b, answer = generate_question()
-            if op == '+':
-                self.assertEqual(answer, a + b)
+            q = self.generator.generate_one()
+            if q.op == '+':
+                self.assertEqual(q.answer, q.a + q.b)
 
     def test_generate_question_subtraction_correct(self):
         for _ in range(200):
-            a, op, b, answer = generate_question()
-            if op == '-':
-                self.assertEqual(answer, a - b)
-                self.assertGreaterEqual(a, b)
+            q = self.generator.generate_one()
+            if q.op == '-':
+                self.assertEqual(q.answer, q.a - q.b)
+                self.assertGreaterEqual(q.a, q.b)
 
     def test_generate_question_addition_b_not_exceed_limit(self):
         for _ in range(200):
-            a, op, b, answer = generate_question()
-            if op == '+':
-                self.assertLessEqual(answer, 100)
+            q = self.generator.generate_one()
+            if q.op == '+':
+                self.assertLessEqual(q.answer, 100)
 
     def test_generate_quiz_count(self):
-        self.assertEqual(len(generate_quiz(10)), 10)
-        self.assertEqual(len(generate_quiz(50)), 50)
-        self.assertEqual(len(generate_quiz(100)), 100)
+        self.assertEqual(len(self.generator.generate_quiz(10)), 10)
+        self.assertEqual(len(self.generator.generate_quiz(50)), 50)
+        self.assertEqual(len(self.generator.generate_quiz(100)), 100)
 
     def test_format_question(self):
-        self.assertEqual(format_question(3, '+', 5), "3 + 5 = ")
-        self.assertEqual(format_question(10, '-', 3), "10 - 3 = ")
+        q = Question(3, '+', 5, 8)
+        self.assertEqual(q.format_question(), "3 + 5 = ")
+        q2 = Question(10, '-', 3, 7)
+        self.assertEqual(q2.format_question(), "10 - 3 = ")
 
     def test_format_answer(self):
-        self.assertEqual(format_answer(3, '+', 5, 8), "3 + 5 = 8")
-        self.assertEqual(format_answer(10, '-', 3, 7), "10 - 3 = 7")
+        q = Question(3, '+', 5, 8)
+        self.assertEqual(q.format_answer(), "3 + 5 = 8")
+        q2 = Question(10, '-', 3, 7)
+        self.assertEqual(q2.format_answer(), "10 - 3 = 7")
 
     def test_append_quiz(self):
-        questions = [(1, '+', 2, 3)]
+        questions = [Question(1, '+', 2, 3)]
         with tempfile.TemporaryDirectory() as tmpdir:
             q_path = os.path.join(tmpdir, "q.txt")
             a_path = os.path.join(tmpdir, "a.txt")
-            append_quiz(questions, q_path, a_path)
+            self.handler.append_quiz(questions, q_path, a_path)
 
             with open(q_path, encoding='utf-8') as f:
                 self.assertEqual(f.read().rstrip('\n'), "1. 1 + 2 = ")
@@ -74,7 +77,7 @@ class TestArithmeticData(unittest.TestCase):
             with open(a_path, encoding='utf-8') as f:
                 self.assertEqual(f.read().rstrip('\n'), "1. 1 + 2 = 3")
 
-            append_quiz([(4, '-', 1, 3)], q_path, a_path)
+            self.handler.append_quiz([Question(4, '-', 1, 3)], q_path, a_path)
             with open(q_path, encoding='utf-8') as f:
                 self.assertEqual(
                     f.read().rstrip('\n'),
@@ -82,20 +85,23 @@ class TestArithmeticData(unittest.TestCase):
                 )
 
     def test_load_cases(self):
-        cases = load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
+        cases = self.handler.load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
         self.assertGreater(len(cases), 0)
-        for a, op, b, answer in cases:
-            self.assertIn(op, ('+', '-'))
-            if op == '+':
-                self.assertEqual(answer, a + b)
+        for q in cases:
+            self.assertIn(q.op, ('+', '-'))
+            if q.op == '+':
+                self.assertEqual(q.answer, q.a + q.b)
             else:
-                self.assertEqual(answer, a - b)
+                self.assertEqual(q.answer, q.a - q.b)
 
     def test_fixture_text_matches_csv(self):
-        """tests/data 中题目、答案文本与 test_cases.csv 一致。"""
-        cases = load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
-        expect_q = '\n'.join(format_numbered_questions(cases)) + '\n'
-        expect_a = '\n'.join(format_numbered_answers(cases)) + '\n'
+        cases = self.handler.load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
+        expect_q = '\n'.join(
+            q.to_numbered_question(i) for i, q in enumerate(cases, 1)
+        ) + '\n'
+        expect_a = '\n'.join(
+            q.to_numbered_answer(i) for i, q in enumerate(cases, 1)
+        ) + '\n'
         q_path = os.path.join(DATA_DIR, "test_questions.txt")
         a_path = os.path.join(DATA_DIR, "test_answers.txt")
         with open(q_path, encoding='utf-8') as f:

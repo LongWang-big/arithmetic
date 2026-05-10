@@ -2,31 +2,38 @@
 import os
 import sys
 
-# 支持 `python3 program/arithmetic_practice.py` 时能找到包 `program`
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if _ROOT not in sys.path:
     sys.path.insert(0, _ROOT)
 
 from program import config
-from program.formatter import format_answer, format_question
-from program.question_generator import generate_quiz
-from program.storage import append_quiz
+from program.question_generator import QuestionGenerator
+from program.storage import QuizFileHandler
 
 
-def main():
-    questions = generate_quiz()
-    q_path = os.path.join(config.RESULTS_DIR, config.QUESTIONS_FILENAME)
-    a_path = os.path.join(config.RESULTS_DIR, config.ANSWERS_FILENAME)
+class QuizApp:
+    """口算练习应用，协调生成、展示与保存流程。"""
 
-    print(f"本次练习共 {len(questions)} 道题：\n")
-    for i, (a, op, b, _) in enumerate(questions, 1):
-        print(f"{i}. {format_question(a, op, b)}")
-    print()
+    def __init__(self):
+        self.generator = QuestionGenerator(
+            max_answer=config.MAX_ANSWER,
+            question_count=config.QUESTION_COUNT,
+        )
+        self.file_handler = QuizFileHandler()
+        self.question_path = os.path.join(config.RESULTS_DIR, config.QUESTIONS_FILENAME)
+        self.answer_path = os.path.join(config.RESULTS_DIR, config.ANSWERS_FILENAME)
 
-    append_quiz(questions, q_path, a_path)
-    print(f"题目已追加保存: {q_path}")
-    print(f"答案已追加保存: {a_path}")
+    def run(self):
+        questions = self.generator.generate_quiz()
+        print(f"本次练习共 {len(questions)} 道题：\n")
+        for i, q in enumerate(questions, 1):
+            print(f"{i}. {q.format_question()}")
+        print()
+
+        self.file_handler.append_quiz(questions, self.question_path, self.answer_path)
+        print(f"题目已追加保存: {self.question_path}")
+        print(f"答案已追加保存: {self.answer_path}")
 
 
 if __name__ == '__main__':
-    main()
+    QuizApp().run()

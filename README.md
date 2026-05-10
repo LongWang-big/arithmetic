@@ -4,10 +4,13 @@
 
 ## 文件说明
 
-| 文件 | 说明 |
-|------|------|
-| `arithmetic_answers.txt` | 练习题（无答案） |
-| `arithmetic_questions.txt` | 答案文件（带完整答案） |
+```
+├── README.md
+├── math_quiz.py
+└── results/
+    ├── arithmetic_answers.txt    # 练习题（无答案）
+    └── arithmetic_questions.txt  # 答案文件（带完整答案）
+```
 
 ## 题目规则
 

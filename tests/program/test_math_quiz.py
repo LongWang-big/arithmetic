@@ -1,5 +1,5 @@
 import unittest
-from math_quiz import generate_quiz
+from .math_quiz import generate_quiz
 
 
 class TestMathQuiz(unittest.TestCase):

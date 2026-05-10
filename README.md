@@ -2,25 +2,28 @@
 
 本项目的练习资料用于100以内加减法口算练习。
 
-## 文件说明
+## 项目结构
 
 ```
 ├── README.md
-├── math_quiz.py              # 主程序
-├── test_math_quiz.py         # 单元测试
-└── results/
-    ├── arithmetic_answers.txt    # 练习题（无答案）
-    └── arithmetic_questions.txt  # 答案文件（带完整答案）
+└── tests/
+    ├── data/
+    │   ├── arithmetic_answers.txt    # 练习题（无答案）
+    │   └── arithmetic_questions.txt  # 答案（带完整答案）
+    └── program/
+        ├── __init__.py
+        ├── math_quiz.py              # 主程序
+        └── test_math_quiz.py         # 单元测试
 ```
 
 ## 运行测试
 
 ```bash
-python3 -m unittest test_math_quiz -v
+python3 -m tests.program.test_math_quiz -v
 ```
 
-## 题目规则
+## 运行答题程序
 
-- 共50道题
-- 包含加法和减法混合运算
-- 所有运算结果均在0-100范围内
+```bash
+python3 -m tests.program.math_quiz
+```

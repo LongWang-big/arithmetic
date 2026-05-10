@@ -6,7 +6,9 @@
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
       "Bash(git -C /Users/lyh/code/test status)",
-      "Bash(git -C /Users/lyh/code/test log --oneline)"
+      "Bash(git -C /Users/lyh/code/test log --oneline)",
+      "Bash(git commit *)",
+      "Bash(git rm *)"
     ]
   }
 }

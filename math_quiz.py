@@ -1,14 +1,16 @@
 import random
 
 def generate_quiz(num_questions=100):
-    """生成100道加减法运算题"""
+    """生成100道加减法运算题，结果在0-100范围内"""
     questions = []
     for _ in range(num_questions):
-        a = random.randint(1, 100)
-        b = random.randint(1, 100)
         op = random.choice(['+', '-'])
-        if op == '-' and a < b:
-            a, b = b, a
+        if op == '+':
+            a = random.randint(1, 99)
+            b = random.randint(1, 100 - a)
+        else:
+            a = random.randint(1, 100)
+            b = random.randint(0, a)
         answer = eval(f"{a} {op} {b}")
         questions.append((a, op, b, answer))
     return questions

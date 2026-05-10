@@ -1,19 +1,5 @@
-import random
+from .generator import generate_quiz
 
-def generate_quiz(num_questions=100):
-    """生成100道加减法运算题，结果在0-100范围内"""
-    questions = []
-    for _ in range(num_questions):
-        op = random.choice(['+', '-'])
-        if op == '+':
-            a = random.randint(1, 99)
-            b = random.randint(1, 100 - a)
-        else:
-            a = random.randint(1, 100)
-            b = random.randint(0, a)
-        answer = eval(f"{a} {op} {b}")
-        questions.append((a, op, b, answer))
-    return questions
 
 def run_quiz():
     """运行答题程序"""
@@ -45,6 +31,7 @@ def run_quiz():
     print("\n" + "=" * 50)
     print(f"练习结束! 你答对了 {correct} 题")
     print("=" * 50)
+
 
 if __name__ == "__main__":
     run_quiz()

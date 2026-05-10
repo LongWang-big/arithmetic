@@ -1,4 +1,4 @@
-from .generator import generate_quiz
+from .test_arithmetic_data import generate_quiz
 
 
 def run_quiz():

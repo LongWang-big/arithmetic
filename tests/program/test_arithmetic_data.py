@@ -1,71 +1,108 @@
-import csv
 import os
-import random
+import unittest
+import tempfile
+
+from program.formatter import (
+    format_answer,
+    format_numbered_answers,
+    format_numbered_questions,
+    format_question,
+)
+from program.question_generator import generate_question, generate_quiz
+from program.storage import append_quiz, load_cases
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
 
 
-def generate_question():
-    """生成一道100以内加减法题，返回 (a, op, b, answer)"""
-    op = random.choice(['+', '-'])
-    if op == '+':
-        a = random.randint(1, 99)
-        b = random.randint(1, 100 - a)
-    else:
-        a = random.randint(1, 100)
-        b = random.randint(0, a)
-    answer = a + b if op == '+' else a - b
-    return (a, op, b, answer)
+class TestArithmeticData(unittest.TestCase):
+
+    def test_generate_question_structure(self):
+        a, op, b, answer = generate_question()
+        self.assertIn(op, ('+', '-'))
+        self.assertIsInstance(a, int)
+        self.assertIsInstance(b, int)
+        self.assertIsInstance(answer, int)
+
+    def test_generate_question_result_range(self):
+        for _ in range(500):
+            a, op, b, answer = generate_question()
+            self.assertGreaterEqual(answer, 0)
+            self.assertLessEqual(answer, 100)
+
+    def test_generate_question_addition_correct(self):
+        for _ in range(200):
+            a, op, b, answer = generate_question()
+            if op == '+':
+                self.assertEqual(answer, a + b)
+
+    def test_generate_question_subtraction_correct(self):
+        for _ in range(200):
+            a, op, b, answer = generate_question()
+            if op == '-':
+                self.assertEqual(answer, a - b)
+                self.assertGreaterEqual(a, b)
+
+    def test_generate_question_addition_b_not_exceed_limit(self):
+        for _ in range(200):
+            a, op, b, answer = generate_question()
+            if op == '+':
+                self.assertLessEqual(answer, 100)
+
+    def test_generate_quiz_count(self):
+        self.assertEqual(len(generate_quiz(10)), 10)
+        self.assertEqual(len(generate_quiz(50)), 50)
+        self.assertEqual(len(generate_quiz(100)), 100)
+
+    def test_format_question(self):
+        self.assertEqual(format_question(3, '+', 5), "3 + 5 = ")
+        self.assertEqual(format_question(10, '-', 3), "10 - 3 = ")
+
+    def test_format_answer(self):
+        self.assertEqual(format_answer(3, '+', 5, 8), "3 + 5 = 8")
+        self.assertEqual(format_answer(10, '-', 3, 7), "10 - 3 = 7")
+
+    def test_append_quiz(self):
+        questions = [(1, '+', 2, 3)]
+        with tempfile.TemporaryDirectory() as tmpdir:
+            q_path = os.path.join(tmpdir, "q.txt")
+            a_path = os.path.join(tmpdir, "a.txt")
+            append_quiz(questions, q_path, a_path)
+
+            with open(q_path, encoding='utf-8') as f:
+                self.assertEqual(f.read().rstrip('\n'), "1. 1 + 2 = ")
+
+            with open(a_path, encoding='utf-8') as f:
+                self.assertEqual(f.read().rstrip('\n'), "1. 1 + 2 = 3")
+
+            append_quiz([(4, '-', 1, 3)], q_path, a_path)
+            with open(q_path, encoding='utf-8') as f:
+                self.assertEqual(
+                    f.read().rstrip('\n'),
+                    "1. 1 + 2 = \n1. 4 - 1 = ",
+                )
+
+    def test_load_cases(self):
+        cases = load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
+        self.assertGreater(len(cases), 0)
+        for a, op, b, answer in cases:
+            self.assertIn(op, ('+', '-'))
+            if op == '+':
+                self.assertEqual(answer, a + b)
+            else:
+                self.assertEqual(answer, a - b)
+
+    def test_fixture_text_matches_csv(self):
+        """tests/data 中题目、答案文本与 test_cases.csv 一致。"""
+        cases = load_cases(os.path.join(DATA_DIR, "test_cases.csv"))
+        expect_q = '\n'.join(format_numbered_questions(cases)) + '\n'
+        expect_a = '\n'.join(format_numbered_answers(cases)) + '\n'
+        q_path = os.path.join(DATA_DIR, "test_questions.txt")
+        a_path = os.path.join(DATA_DIR, "test_answers.txt")
+        with open(q_path, encoding='utf-8') as f:
+            self.assertEqual(f.read(), expect_q)
+        with open(a_path, encoding='utf-8') as f:
+            self.assertEqual(f.read(), expect_a)
 
 
-def generate_quiz(num_questions=100):
-    """生成指定数量的题目"""
-    return [generate_question() for _ in range(num_questions)]
-
-
-def format_question(a, op, b, answer=None):
-    """格式化题目，带答案或不带答案"""
-    if answer is not None:
-        return f"{a} {op} {b} = {answer}"
-    return f"{a} {op} {b} = "
-
-
-def save_questions(questions, question_path, answer_path):
-    """将题目和答案分别保存到文件"""
-    question_lines = []
-    answer_lines = []
-
-    for i, (a, op, b, answer) in enumerate(questions, 1):
-        question_lines.append(f"{i}. {format_question(a, op, b)}")
-        answer_lines.append(f"{i}. {format_question(a, op, b, answer)}")
-
-    with open(question_path, 'w') as f:
-        f.write('\n'.join(question_lines))
-
-    with open(answer_path, 'w') as f:
-        f.write('\n'.join(answer_lines))
-
-
-def load_cases(csv_path=None):
-    """从CSV文件加载测试用例"""
-    if csv_path is None:
-        csv_path = os.path.join(DATA_DIR, "test_cases.csv")
-    cases = []
-    with open(csv_path) as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            a = int(row['a'])
-            op = row['op']
-            b = int(row['b'])
-            answer = int(row['answer'])
-            cases.append((a, op, b, answer))
-    return cases
-
-
-def export_quiz(num_questions=50):
-    """生成题目并导出到 data 目录"""
-    questions = generate_quiz(num_questions)
-    q_path = os.path.join(DATA_DIR, "test_questions.txt")
-    a_path = os.path.join(DATA_DIR, "test_answers.txt")
-    save_questions(questions, q_path, a_path)
-    return questions
+if __name__ == '__main__':
+    unittest.main()
